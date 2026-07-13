@@ -46,5 +46,5 @@ python3 main.py
 
 ## TO DO
 
-[] Github workflow
-[] Docker support
+- [ ] Github workflow
+- [ ] Docker support
