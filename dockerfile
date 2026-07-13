@@ -1,15 +1,8 @@
-FROM ubuntu:latest
+FROM ghcr.io/astral-sh/uv:debian
 
 WORKDIR /opt/app
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    curl \
-    python3 \
-    python3-venv \
-
-RUN curl -LsSf https://astral.sh/uv/install.sh | UV_INSTALL_DIR=/usr/local/bin sh
-
-ENV UV_COMPILE_BYTECODE=1
+RUN apt-get update && apt-get upgrade -y
 
 COPY pyproject.toml uv.lock ./
 
