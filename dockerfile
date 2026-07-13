@@ -2,12 +2,12 @@ FROM ghcr.io/astral-sh/uv:debian
 
 WORKDIR /opt/app
 
-RUN apt-get update && apt-get upgrade -y
+# COPY pyproject.toml uv.lock ./
 
-COPY pyproject.toml uv.lock ./
+# RUN uv sync --frozen --no-cache --no-install-project
 
-RUN uv sync --frozen --no-install-project
+# COPY . .
 
-COPY . .
+# RUN uv sync --frozen --no-cache
 
-CMD uv run python main.py
+# CMD ["uv", "run", "python", "main.py"]
