@@ -5,6 +5,7 @@ __pycache__/
 
 data/*
 !data/.gitkeep
+!data/food_coded.csv
 
 outputs/*
 !outputs/.gitkeep
