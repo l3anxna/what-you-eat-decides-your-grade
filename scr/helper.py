@@ -3,20 +3,19 @@ import sys
 from pathlib import Path
 
 
-def resolve_path(path: str) -> Path:
-    """
-    Resolves any relative path string against the project's root directory,
-    ensuring consistent lookups across Colab, GitHub Actions, and local setups.
-    """
-    if "__file__" in globals() or "models.py" in sys.argv[0] or "helper.py" in sys.argv[0]:
-        project_root = Path(__file__).resolve().parent.parent
-    else:
-        project_root = Path(os.getcwd()).resolve()
-        
-        if project_root.name == "notebooks" or "notebooks" in project_root.parts[-1]:
-            project_root = project_root.parent
+if "__file__" in globals() or (sys.argv and ("models.py" in sys.argv[0] or "helper.py" in sys.argv[0])):
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent
+else:
+    PROJECT_ROOT = Path(os.getcwd()).resolve()
+    if PROJECT_ROOT.name == "notebooks" or "notebooks" in PROJECT_ROOT.parts[-1]:
+        PROJECT_ROOT = PROJECT_ROOT.parent
 
-    target_path = project_root / path
+OUTPUT_PATH = PROJECT_ROOT / "outputs"
+MODELS_PATH = PROJECT_ROOT / "models"
+
+
+def resolve_path(path: str) -> Path:
+    target_path = PROJECT_ROOT / path
 
     if "models" in target_path.parts:
         if target_path.suffix not in ['.pt', '.pth'] and not target_path.is_dir():
