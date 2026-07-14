@@ -12,6 +12,10 @@ class AbstractModel(nn.Module, ABC):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         pass
 
+    @abstractmethod
+    def predict(self, x: torch.Tensor) -> torch.Tensor:
+        pass
+
     @property
     def device(self) -> torch.device:
         """Dynamically identifies what hardware this instance is using."""
