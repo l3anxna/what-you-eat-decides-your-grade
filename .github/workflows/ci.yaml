@@ -27,3 +27,19 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
+
+  docker-smoke:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t app:ci .
+
+      - name: Smoke run (entrypoint exits cleanly)
+        run: timeout 30 docker run --rm app:ci
+
+      - name: Verify shipped dependency surface
+        run: docker run --rm app:ci uv run pytest tests/docker -v

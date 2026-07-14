@@ -1,0 +1,9 @@
+.venv
+.git
+.github
+notebooks
+outputs
+*.ipynb
+.claude
+.python-version
+README.md
