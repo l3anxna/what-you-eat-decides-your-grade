@@ -1,7 +1,12 @@
+from abc import ABC, abstractmethod
+from typing import Any
+
+import numpy as np
+import pandas as pd
+import shap
 import torch
 import torch.nn as nn
 from helper import resolve_path
-from abc import ABC, abstractmethod
 
 
 class AbstractModel(nn.Module, ABC):
@@ -49,3 +54,34 @@ class AbstractModel(nn.Module, ABC):
         print(f"Model weights successfully loaded on [{self.device}] from: {full_path}")
 
         return
+
+
+class ShapFeatureSelector:
+    """Cross-model SHAP feature agreement, generalized from the EDA notebook's
+    RandomForest/GradientBoosting comparison to an arbitrary set of already-fitted,
+    tree-based (shap.TreeExplainer-compatible) sklearn-API regressors."""
+
+    def __init__(self, models: dict[str, Any]):
+        self.models = models
+
+    def compute_importances(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Mean absolute SHAP value per feature, one column per model."""
+        importances = {}
+
+        for name, model in self.models.items():
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(X)
+
+            importances[name] = pd.Series(
+                np.abs(shap_values).mean(axis=0), index=X.columns
+            )
+
+        return pd.DataFrame(importances)
+
+    def select_agreed_features(self, X: pd.DataFrame, threshold: float = 0.01) -> list[str]:
+        """Features whose mean absolute SHAP value exceeds `threshold` in every model."""
+        importances = self.compute_importances(X)
+
+        agreed = importances[(importances > threshold).all(axis=1)]
+
+        return agreed.index.tolist()

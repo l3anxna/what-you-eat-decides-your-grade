@@ -4,6 +4,7 @@
 notebooks
 outputs
 *.ipynb
+scr/analytic.py
 .claude
 .python-version
 README.md

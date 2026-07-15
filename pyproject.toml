@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "numpy>=2.5.1",
+    "numpy>=2.0,<2.5",
     "pandas>=3.0.3",
     "torch>=2.13.0",
 ]
@@ -17,6 +17,11 @@ dev = [
 eda = [
     "matplotlib>=3.11.0",
     "seaborn>=0.13.2",
+]
+ml = [
+    "scikit-learn>=1.9.0",
+    "shap>=0.52.0",
+    "xgboost>=3.3.0",
 ]
 
 [tool.pytest.ini_options]
