@@ -11,11 +11,12 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "scr"))
 
 import pandas as pd  # noqa: E402
-from feature import TARGET_COL, mask_features, clean_data  # noqa: E402
-from helper import MODELS_PATH  # noqa: E402
-from models import GPARegressorNN, SklearnModel  # noqa: E402
+from feature import TARGET_COL, mask_features  # noqa: E402
+from helper import MODELS_PATH, PROJECT_ROOT  # noqa: E402
+from models import BaggingEnsemble, GPARegressorNN, SklearnModel  # noqa: E402
 
 FEATURE_MASK_PATH = MODELS_PATH / "feature_mask.json"
+SAMPLE_PATH = PROJECT_ROOT / "data" / "sample_input.csv"
 
 MODEL_CHOICES = [
     ("Linear Regression", "linear_regression"),
@@ -23,6 +24,11 @@ MODEL_CHOICES = [
     ("Gradient Boosting", "gradient_boosting"),
     ("XGBoost", "xgboost"),
     ("Neural Net", "neural_net"),
+    ("Linear Regression (Bagged)", "linear_regression_bagged"),
+    ("Random Forest (Bagged)", "random_forest_bagged"),
+    ("Gradient Boosting (Bagged)", "gradient_boosting_bagged"),
+    ("XGBoost (Bagged)", "xgboost_bagged"),
+    ("Neural Net (Bagged)", "neural_net_bagged"),
 ]
 
 
@@ -37,7 +43,11 @@ def load_feature_mask() -> list[str]:
 
 
 def load_saved_model(slug: str, input_dim: int):
-    if slug == "neural_net":
+    if slug.endswith("_bagged"):
+        # The factory is only needed by BaggingEnsemble.fit() to train fresh members --
+        # load_model() replaces estimators_/n_estimators_/random_state from disk directly.
+        model = BaggingEnsemble(factory=lambda: None)
+    elif slug == "neural_net":
         model = GPARegressorNN(input_dim=input_dim)
     else:
         # The wrapped estimator is irrelevant here -- load_model() immediately
@@ -49,8 +59,13 @@ def load_saved_model(slug: str, input_dim: int):
     return model
 
 
-def load_data() -> pd.DataFrame:
-    return clean_data()
+def load_sample_data() -> pd.DataFrame:
+    if not SAMPLE_PATH.exists():
+        from sample_data import generate_sample_data
+
+        return generate_sample_data()
+
+    return pd.read_csv(SAMPLE_PATH)
 
 
 def prompt_model_choice() -> str | None:
@@ -82,9 +97,6 @@ def main():
     if slug is None:
         return
 
-    sample = load_data()
-
-    slug = prompt_model_choice()
     try:
         model = load_saved_model(slug, input_dim=len(mask))
     except ModuleNotFoundError as e:
