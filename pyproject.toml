@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "joblib>=1.5.3",
     "numpy>=2.0,<2.5",
     "pandas>=3.0.3",
     "torch>=2.13.0",
@@ -19,7 +20,6 @@ eda = [
     "seaborn>=0.13.2",
 ]
 ml = [
-    "joblib>=1.5.3",
     "scikit-learn>=1.9.0",
     "shap>=0.52.0",
     "xgboost>=3.3.0",
