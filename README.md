@@ -22,8 +22,11 @@ uv run python main.py           # interactive CLI: pick a model, predict on samp
 ## Docker
 
 ```
-# Coming soon!
+docker build -t what-you-eat-decides-your-grade .
+docker run --rm -it what-you-eat-decides-your-grade
 ```
+
+The build trains and bakes all 5 models into the image (runs `scr/pipeline.py`). `-it` is required for the interactive model-selection prompt; without it, the container just exits cleanly.
 
 ## Members
 

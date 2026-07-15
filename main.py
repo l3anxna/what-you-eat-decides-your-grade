@@ -53,13 +53,17 @@ def load_data() -> pd.DataFrame:
     return clean_data()
 
 
-def prompt_model_choice() -> str:
+def prompt_model_choice() -> str | None:
     print("Select a model:")
     for i, (label, _) in enumerate(MODEL_CHOICES, start=1):
         print(f"  {i}) {label}")
 
     while True:
-        choice = input("> ").strip()
+        try:
+            choice = input("> ").strip()
+        except EOFError:
+            print("\nNo input received -- exiting.")
+            return None
 
         if choice.isdigit() and 1 <= int(choice) <= len(MODEL_CHOICES):
             return MODEL_CHOICES[int(choice) - 1][1]
@@ -74,8 +78,8 @@ def main():
         print(e)
         return
 
-    if not sys.stdin.isatty():
-        print("No interactive terminal detected -- skipping model selection.")
+    slug = prompt_model_choice()
+    if slug is None:
         return
 
     sample = load_data()
@@ -90,6 +94,7 @@ def main():
         )
         return
 
+    sample = load_sample_data()
     X = mask_features(sample.drop(columns=[TARGET_COL]), mask)
     preds = model.predict(X)
 
