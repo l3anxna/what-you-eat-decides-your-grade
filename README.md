@@ -41,7 +41,7 @@ python3 main.py
 
 | **Github**       | **Classroom**                |
 |------------------|------------------------------|
-| \|3anxna         | Patthadon Aroonpairodjanakul |
+| \l3anxna         | Patthadon Aroonpairodjanakul |
 | QuantumTacoNinja | Worapat Hongsetong           |
 
 ## TO DO
