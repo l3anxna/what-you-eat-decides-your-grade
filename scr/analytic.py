@@ -10,7 +10,9 @@ from sklearn.neighbors import LocalOutlierFactor
 plt.style.use("ggplot")
 
 
-def plot_missing_values(df: pd.DataFrame, output_path=OUTPUT_PATH / "missing_values.png"):
+def plot_missing_values(
+    df: pd.DataFrame, output_path=OUTPUT_PATH / "missing_values.png"
+):
     missing = df.isnull().sum().sort_values(ascending=False)
     missing = missing[missing > 0]
 
@@ -28,11 +30,20 @@ def plot_missing_values(df: pd.DataFrame, output_path=OUTPUT_PATH / "missing_val
     return output_path
 
 
-def plot_correlation_heatmap(df: pd.DataFrame, output_path=OUTPUT_PATH / "correlation_heatmap.png"):
+def plot_correlation_heatmap(
+    df: pd.DataFrame, output_path=OUTPUT_PATH / "correlation_heatmap.png"
+):
     corr = df.corr()
 
     plt.figure(figsize=(14, 12))
-    sns.heatmap(corr, cmap="coolwarm", center=0, square=True, linewidths=0.5, cbar_kws={"shrink": 0.8})
+    sns.heatmap(
+        corr,
+        cmap="coolwarm",
+        center=0,
+        square=True,
+        linewidths=0.5,
+        cbar_kws={"shrink": 0.8},
+    )
     plt.title("Correlation Matrix")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
@@ -45,7 +56,9 @@ def plot_correlation_heatmap(df: pd.DataFrame, output_path=OUTPUT_PATH / "correl
 
 
 def plot_correlation_with_target(
-    df: pd.DataFrame, target: str = TARGET_COL, output_path=OUTPUT_PATH / "correlation_with_gpa.png"
+    df: pd.DataFrame,
+    target: str = TARGET_COL,
+    output_path=OUTPUT_PATH / "correlation_with_gpa.png",
 ):
     corr_target = df.corr()[target].drop(target).sort_values(ascending=False)
 
@@ -63,11 +76,15 @@ def plot_correlation_with_target(
 
 
 def plot_shap_importance(
-    importances: pd.DataFrame, threshold: float = 0.01, output_path=OUTPUT_PATH / "shap_importance.png"
+    importances: pd.DataFrame,
+    threshold: float = 0.01,
+    output_path=OUTPUT_PATH / "shap_importance.png",
 ):
     agreed = importances[(importances > threshold).all(axis=1)]
     if agreed.empty:
-        agreed = importances.loc[importances.mean(axis=1).sort_values(ascending=False).head(10).index]
+        agreed = importances.loc[
+            importances.mean(axis=1).sort_values(ascending=False).head(10).index
+        ]
 
     agreed = agreed.sort_values(by=agreed.columns[0], ascending=False)
     plot_df = agreed.reset_index(names="feature").melt(
@@ -88,7 +105,41 @@ def plot_shap_importance(
     return output_path
 
 
-def plot_model_comparison(comparison: pd.DataFrame, output_path=OUTPUT_PATH / "model_comparison.png"):
+def plot_selection_stability(
+    selection_freq: pd.Series,
+    threshold: float = 0.5,
+    output_path=OUTPUT_PATH / "shap_selection_stability.png",
+):
+    """Bars showing what fraction of bootstrap resamples each feature cleared the SHAP
+    agreement threshold in. Features above `threshold` (marked with a reference line) are
+    the ones that made it into the final feature mask."""
+    top = selection_freq.head(20).sort_values()
+
+    plt.figure(figsize=(10, 8))
+    colors = ["#55A868" if v >= threshold else "#C44E52" for v in top.values]
+    top.plot(kind="barh", color=colors)
+    plt.axvline(
+        threshold,
+        color="black",
+        linestyle="--",
+        linewidth=1,
+        label=f"threshold ({threshold})",
+    )
+    plt.title("Bootstrap SHAP-Selection Frequency by Feature")
+    plt.xlabel("Fraction of Bootstrap Resamples Selected In")
+    plt.legend()
+    plt.tight_layout()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
+    plt.close()
+
+    return output_path
+
+
+def plot_model_comparison(
+    comparison: pd.DataFrame, output_path=OUTPUT_PATH / "model_comparison.png"
+):
     _, axes = plt.subplots(1, 2, figsize=(14, 5))
 
     by_mae = comparison.sort_values("MAE")
@@ -112,7 +163,9 @@ def plot_model_comparison(comparison: pd.DataFrame, output_path=OUTPUT_PATH / "m
     return output_path
 
 
-def plot_cv_comparison(cv_comparison: pd.DataFrame, output_path=OUTPUT_PATH / "cv_comparison.png"):
+def plot_cv_comparison(
+    cv_comparison: pd.DataFrame, output_path=OUTPUT_PATH / "cv_comparison.png"
+):
     by_mae = cv_comparison.sort_values("MAE_mean")
 
     plt.figure(figsize=(10, 6))
@@ -141,9 +194,13 @@ def run_anomaly_detection(X: pd.DataFrame) -> pd.Series:
     return pd.Series(flagged_by, index=X.index, name="flagged_by")
 
 
-def plot_anomaly_agreement(flagged_by: pd.Series, output_path=OUTPUT_PATH / "anomaly_agreement.png"):
+def plot_anomaly_agreement(
+    flagged_by: pd.Series, output_path=OUTPUT_PATH / "anomaly_agreement.png"
+):
     plt.figure(figsize=(10, 4))
-    flagged_by.value_counts().sort_index().plot(kind="bar", color=["#4C72B0", "#DD8452", "#55A868"])
+    flagged_by.value_counts().sort_index().plot(
+        kind="bar", color=["#4C72B0", "#DD8452", "#55A868"]
+    )
     plt.title("Rows by Number of Anomaly-Detection Methods That Flagged Them")
     plt.xlabel("Number of Methods Agreeing (0-2)")
     plt.ylabel("Row Count")
@@ -169,6 +226,7 @@ def main():
 
     results = run_training_comparison()
     plot_shap_importance(results["importances"])
+    plot_selection_stability(results["selection_freq"])
     plot_model_comparison(results["single_split"])
     plot_cv_comparison(results["cv"])
 
