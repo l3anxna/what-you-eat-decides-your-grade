@@ -3,8 +3,8 @@ import pandas as pd
 import seaborn as sns
 from feature import TARGET_COL, clean_data, load_raw_data
 from helper import OUTPUT_PATH
-from models import ShapFeatureSelector
-from sklearn.ensemble import GradientBoostingRegressor, IsolationForest, RandomForestRegressor
+from pipeline import run_training_comparison
+from sklearn.ensemble import IsolationForest
 from sklearn.neighbors import LocalOutlierFactor
 
 plt.style.use("ggplot")
@@ -88,6 +88,47 @@ def plot_shap_importance(
     return output_path
 
 
+def plot_model_comparison(comparison: pd.DataFrame, output_path=OUTPUT_PATH / "model_comparison.png"):
+    _, axes = plt.subplots(1, 2, figsize=(14, 5))
+
+    by_mae = comparison.sort_values("MAE")
+    axes[0].barh(by_mae["model"], by_mae["MAE"])
+    axes[0].set_title("MAE by Model (80/20 split)")
+    axes[0].set_xlabel("MAE (lower is better)")
+    axes[0].invert_yaxis()
+
+    by_r2 = comparison.sort_values("R2", ascending=False)
+    axes[1].barh(by_r2["model"], by_r2["R2"])
+    axes[1].set_title("R² by Model (80/20 split)")
+    axes[1].set_xlabel("R² (higher is better)")
+    axes[1].invert_yaxis()
+
+    plt.tight_layout()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
+    plt.close()
+
+    return output_path
+
+
+def plot_cv_comparison(cv_comparison: pd.DataFrame, output_path=OUTPUT_PATH / "cv_comparison.png"):
+    by_mae = cv_comparison.sort_values("MAE_mean")
+
+    plt.figure(figsize=(10, 6))
+    plt.barh(by_mae["model"], by_mae["MAE_mean"], xerr=by_mae["MAE_std"], capsize=4)
+    plt.title("5-Fold CV MAE by Model (mean ± std)")
+    plt.xlabel("MAE (lower is better)")
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path)
+    plt.close()
+
+    return output_path
+
+
 def run_anomaly_detection(X: pd.DataFrame) -> pd.Series:
     iso = IsolationForest(contamination=0.1, random_state=42)
     iso_pred = iso.fit_predict(X)
@@ -125,12 +166,11 @@ def main():
     plot_correlation_with_target(df)
 
     X = df.drop(columns=[TARGET_COL])
-    y = df[TARGET_COL]
 
-    rf = RandomForestRegressor(random_state=42).fit(X, y)
-    gb = GradientBoostingRegressor(random_state=42).fit(X, y)
-    importances = ShapFeatureSelector({"RandomForest": rf, "GradientBoosting": gb}).compute_importances(X)
-    plot_shap_importance(importances)
+    results = run_training_comparison()
+    plot_shap_importance(results["importances"])
+    plot_model_comparison(results["single_split"])
+    plot_cv_comparison(results["cv"])
 
     flagged_by = run_anomaly_detection(X)
     plot_anomaly_agreement(flagged_by)

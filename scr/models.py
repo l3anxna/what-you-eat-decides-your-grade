@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable
 
 import joblib
 import numpy as np
@@ -8,6 +8,8 @@ import shap
 import torch
 import torch.nn as nn
 from helper import resolve_path
+from sklearn.metrics import mean_absolute_error, r2_score
+from sklearn.model_selection import KFold
 
 
 class NNAbstractModel(nn.Module, ABC):
@@ -21,6 +23,40 @@ class NNAbstractModel(nn.Module, ABC):
     @abstractmethod
     def predict(self, x: torch.Tensor) -> torch.Tensor:
         pass
+
+    @staticmethod
+    def _to_tensor(data) -> torch.Tensor:
+        if isinstance(data, (pd.DataFrame, pd.Series)):
+            data = data.to_numpy()
+
+        return torch.as_tensor(np.asarray(data).copy(), dtype=torch.float32)
+
+    def fit(
+        self,
+        X: pd.DataFrame,
+        y: pd.Series,
+        epochs: int = 300,
+        lr: float = 1e-3,
+        weight_decay: float = 1e-2,
+    ) -> "NNAbstractModel":
+        """Generic MSE-regression training loop shared by every NNAbstractModel subclass."""
+        self.train()
+
+        X_t = self._to_tensor(X)
+        y_t = self._to_tensor(y)
+
+        optimizer = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+        loss_fn = nn.MSELoss()
+
+        for _ in range(epochs):
+            optimizer.zero_grad()
+            loss = loss_fn(self.forward(X_t), y_t)
+            loss.backward()
+            optimizer.step()
+
+        self.eval()
+
+        return self
 
     @property
     def device(self) -> torch.device:
@@ -96,6 +132,101 @@ class SklearnAbstractModel(ABC):
         print(f"Model successfully loaded from: {full_path}")
 
         return
+
+
+class SklearnModel(SklearnAbstractModel):
+    """Thin SklearnAbstractModel wrapper around any already-constructed,
+    unfitted sklearn/xgboost-API estimator (e.g. SklearnModel(LinearRegression()))."""
+
+    def __init__(self, estimator: Any):
+        self._estimator = estimator
+
+        super().__init__()
+
+    def build_model(self) -> Any:
+        return self._estimator
+
+
+class GPARegressorNN(NNAbstractModel):
+    """Small MLP counterpart to the sklearn/xgboost regressors, kept deliberately
+    shallow (single hidden layer + dropout) given the dataset only has ~100 rows."""
+
+    def __init__(self, input_dim: int, hidden_dim: int = 16, dropout: float = 0.3, seed: int = 42):
+        super().__init__()
+
+        torch.manual_seed(seed)
+
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, 1),
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.net(x).squeeze(-1)
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        self.eval()
+
+        with torch.no_grad():
+            return self.forward(self._to_tensor(X)).cpu().numpy()
+
+
+def compare_models(
+    model_factories: dict[str, Callable[[], Any]],
+    X_train: pd.DataFrame,
+    X_val: pd.DataFrame,
+    y_train: pd.Series,
+    y_val: pd.Series,
+) -> pd.DataFrame:
+    """Single train/val split comparison: fits each model once, scores it on the held-out split."""
+    rows = []
+
+    for name, factory in model_factories.items():
+        model = factory().fit(X_train, y_train)
+        preds = model.predict(X_val)
+
+        rows.append({
+            "model": name,
+            "MAE": mean_absolute_error(y_val, preds),
+            "R2": r2_score(y_val, preds),
+        })
+
+    return pd.DataFrame(rows).sort_values("MAE").reset_index(drop=True)
+
+
+def cross_validate_models(
+    model_factories: dict[str, Callable[[], Any]],
+    X: pd.DataFrame,
+    y: pd.Series,
+    n_splits: int = 5,
+    random_state: int = 42,
+) -> pd.DataFrame:
+    """K-fold comparison. A fresh model is built per fold (via `model_factories`) so every
+    fold trains from scratch instead of continuing an already-fitted model's weights."""
+    fold_indices = list(KFold(n_splits=n_splits, shuffle=True, random_state=random_state).split(X))
+
+    rows = []
+    for name, factory in model_factories.items():
+        mae_scores, r2_scores = [], []
+
+        for train_idx, val_idx in fold_indices:
+            model = factory().fit(X.iloc[train_idx], y.iloc[train_idx])
+            preds = model.predict(X.iloc[val_idx])
+
+            mae_scores.append(mean_absolute_error(y.iloc[val_idx], preds))
+            r2_scores.append(r2_score(y.iloc[val_idx], preds))
+
+        rows.append({
+            "model": name,
+            "MAE_mean": np.mean(mae_scores),
+            "MAE_std": np.std(mae_scores),
+            "R2_mean": np.mean(r2_scores),
+            "R2_std": np.std(r2_scores),
+        })
+
+    return pd.DataFrame(rows).sort_values("MAE_mean").reset_index(drop=True)
 
 
 class ShapFeatureSelector:
