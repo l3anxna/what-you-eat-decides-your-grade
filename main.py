@@ -11,12 +11,11 @@ REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT / "scr"))
 
 import pandas as pd  # noqa: E402
-from feature import TARGET_COL, mask_features  # noqa: E402
-from helper import MODELS_PATH, PROJECT_ROOT  # noqa: E402
+from feature import TARGET_COL, mask_features, clean_data  # noqa: E402
+from helper import MODELS_PATH  # noqa: E402
 from models import GPARegressorNN, SklearnModel  # noqa: E402
 
 FEATURE_MASK_PATH = MODELS_PATH / "feature_mask.json"
-SAMPLE_PATH = PROJECT_ROOT / "data" / "sample_input.csv"
 
 MODEL_CHOICES = [
     ("Linear Regression", "linear_regression"),
@@ -50,13 +49,8 @@ def load_saved_model(slug: str, input_dim: int):
     return model
 
 
-def load_sample_data() -> pd.DataFrame:
-    if not SAMPLE_PATH.exists():
-        from sample_data import generate_sample_data
-
-        return generate_sample_data()
-
-    return pd.read_csv(SAMPLE_PATH)
+def load_data() -> pd.DataFrame:
+    return clean_data()
 
 
 def prompt_model_choice() -> str | None:
@@ -88,6 +82,9 @@ def main():
     if slug is None:
         return
 
+    sample = load_data()
+
+    slug = prompt_model_choice()
     try:
         model = load_saved_model(slug, input_dim=len(mask))
     except ModuleNotFoundError as e:
