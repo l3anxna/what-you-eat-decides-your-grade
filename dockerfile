@@ -4,10 +4,10 @@ WORKDIR /opt/app
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-cache --no-install-project
+RUN uv sync --frozen --no-cache --no-install-project --group ml
 
 COPY . .
 
-RUN uv run python -c "import sys; sys.exit()"
+RUN uv run python scr/pipeline.py
 
 CMD ["uv", "run", "python", "main.py"]
