@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
+import joblib
 import numpy as np
 import pandas as pd
 import shap
@@ -9,7 +10,7 @@ import torch.nn as nn
 from helper import resolve_path
 
 
-class AbstractModel(nn.Module, ABC):
+class NNAbstractModel(nn.Module, ABC):
     def __init__(self):
         super().__init__()
 
@@ -52,6 +53,47 @@ class AbstractModel(nn.Module, ABC):
         self.eval()
         
         print(f"Model weights successfully loaded on [{self.device}] from: {full_path}")
+
+        return
+
+
+class SklearnAbstractModel(ABC):
+    def __init__(self):
+        self.model = self.build_model()
+
+    @abstractmethod
+    def build_model(self) -> Any:
+        """Constructs and returns the underlying (unfitted) sklearn-API estimator."""
+        pass
+
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> "SklearnAbstractModel":
+        self.model.fit(X, y)
+
+        return self
+
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        return self.model.predict(X)
+
+    def save_model(self, name: str):
+        """Saves the fitted estimator into the absolute ./models/ directory path."""
+        full_path = resolve_path(f"models/{name}").with_suffix(".joblib")
+
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+
+        joblib.dump(self.model, full_path)
+        print(f"Model successfully saved to: {full_path}")
+
+        return
+
+    def load_model(self, name: str):
+        """Loads a previously saved fitted estimator."""
+        full_path = resolve_path(f"models/{name}").with_suffix(".joblib")
+
+        if not full_path.exists():
+            raise FileNotFoundError(f"No model file found at designated path: {full_path}")
+
+        self.model = joblib.load(full_path)
+        print(f"Model successfully loaded from: {full_path}")
 
         return
 

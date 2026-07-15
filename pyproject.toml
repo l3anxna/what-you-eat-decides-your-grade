@@ -19,6 +19,7 @@ eda = [
     "seaborn>=0.13.2",
 ]
 ml = [
+    "joblib>=1.5.3",
     "scikit-learn>=1.9.0",
     "shap>=0.52.0",
     "xgboost>=3.3.0",

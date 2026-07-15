@@ -1,5 +1,5 @@
-from models import AbstractModel
+from models import NNAbstractModel
 
 
-def pipeline(model: AbstractModel):
+def pipeline(model: NNAbstractModel):
     pass
