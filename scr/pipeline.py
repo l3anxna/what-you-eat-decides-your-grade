@@ -304,14 +304,16 @@ def train_final_models(
     return {name: factory().fit(X, y) for name, factory in factories.items()}
 
 
-def save_all_models(models: dict[str, Any], mask: list[str]):
+def save_all_models(models: dict[str, Any], mask: list[str], best_model_name: str | None = None):
     for name, model in models.items():
         model.save_model(MODEL_SLUGS[name])
 
+    metadata = {"target": TARGET_COL, "features": mask}
+    if best_model_name:
+        metadata["best_model"] = MODEL_SLUGS[best_model_name]
+
     FEATURE_MASK_PATH.parent.mkdir(parents=True, exist_ok=True)
-    FEATURE_MASK_PATH.write_text(
-        json.dumps({"target": TARGET_COL, "features": mask}, indent=2)
-    )
+    FEATURE_MASK_PATH.write_text(json.dumps(metadata, indent=2))
 
     print(f"Saved {len(models)} models + feature mask to: {MODELS_PATH}")
 
@@ -331,7 +333,7 @@ def pipeline():
     print(f"\nBest model by CV MAE: {results['best_model_name']}")
 
     final_models = train_final_models(results["mask"])
-    save_all_models(final_models, results["mask"])
+    save_all_models(final_models, results["mask"], best_model_name=results["best_model_name"])
 
     return results["best_model"]
 

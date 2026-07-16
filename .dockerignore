@@ -5,6 +5,7 @@ notebooks
 outputs
 *.ipynb
 scr/analytic.py
+scr/learning_curve.py
 .claude
 .python-version
 README.md

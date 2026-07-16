@@ -13,8 +13,9 @@ uv sync --group ml
 ## Run
 
 ```
-uv run python scr/pipeline.py   # trains & saves all 5 models to models/
-uv run python main.py           # interactive CLI: pick a model, predict on sample data
+uv run python scr/pipeline.py   # trains & saves all 10 models (5 base + 5 bagged) to models/
+uv run python main.py           # interactive CLI: answer 6 questions, predict your GPA
+uv run python main.py --test-prediction   # dev/test CLI: pick any of the 10 models, predict on sample data
 ```
 
 `uv run pytest` runs the tests. `uv run --group eda --group ml python scr/analytic.py` regenerates the plots in `outputs/`.
@@ -26,7 +27,7 @@ docker build -t what-you-eat-decides-your-grade .
 docker run --rm -it what-you-eat-decides-your-grade
 ```
 
-The build trains and bakes all 5 models into the image (runs `scr/pipeline.py`). `-it` is required for the interactive model-selection prompt; without it, the container just exits cleanly.
+The build trains and bakes all 10 models into the image (runs `scr/pipeline.py`). `-it` is required for the interactive prompts; without it, the container just exits cleanly.
 
 ## Members
 

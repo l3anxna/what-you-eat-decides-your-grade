@@ -165,3 +165,25 @@ def get_train_val_data(
     y = df[target]
 
     return train_val_split(X, y, val_size, random_state)
+
+
+def categorical_choices(coded_col: str, raw_text_col: str, path: str | None = None) -> dict[int, str]:
+    """Derives {code: label} for a '_coded' categorical column by cross-referencing it
+    against its paired raw free-text column in the original data. The label picked per
+    code is its most frequent normalized text value (mode), tie-broken by shortest
+    string -- mechanically "scraped" from the data rather than hand-authored, so it
+    stays correct if the underlying CSV changes."""
+    raw = load_raw_data(path)
+    normalized = raw[raw_text_col].apply(normalize_text)
+
+    choices = {}
+    for code, group in normalized.groupby(raw[coded_col]):
+        valid = group.dropna()
+        if valid.empty:
+            continue
+
+        counts = valid.value_counts()
+        top = counts[counts == counts.max()].index.tolist()
+        choices[int(code)] = min(top, key=len)
+
+    return choices
